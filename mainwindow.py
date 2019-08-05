@@ -1,8 +1,7 @@
 import sys
-
 from PyQt5 import QtGui, QtWidgets
-
 from AverageView.average_vm import AverageVM
+import VectorManager
 # import qdarkstyle
 # import images_qr
 
@@ -16,7 +15,8 @@ class MainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self)
 
         # Initialize the pages
-        self.Average = AverageVM(self)
+        #self.Average = AverageVM(self)
+        self.mgr = VectorManager.VectorManager(self)
 
         # Initialize the window
         self.main_window_init()

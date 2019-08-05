@@ -9,3 +9,6 @@ pandas
 pynmea2
 obsub
 scipy
+dash
+dash-daq
+bokeh
