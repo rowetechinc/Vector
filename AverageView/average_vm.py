@@ -41,11 +41,11 @@ class AverageVM(average_view.Ui_AverageView):
 
     def update_table_views(self, results_dict):
         # Set the Tableview with the dataframe
-        for ss_config in results_dict.values():
-            if not ss_config.df_earth_east.empty:
-                east_mean = ss_config.df_earth_east.mean()
-                east_std = ss_config.df_earth_east.std()
-                east_model = PandasDfTableModel.DataFrameModel(ss_config.df_earth_east)
+        for avg_result_ss_config in results_dict.values():
+            if not avg_result_ss_config.df_earth_east.empty:
+                east_mean = avg_result_ss_config.df_earth_east.mean()
+                east_std = avg_result_ss_config.df_earth_east.std()
+                east_model = PandasDfTableModel.DataFrameModel(avg_result_ss_config.df_earth_east)
                 east_avg_model = PandasDfTableModel.PandasDfTableModel(east_mean.to_frame().transpose())
                 east_std_model = PandasDfTableModel.PandasDfTableModel(east_std.to_frame().transpose())
                 self.eastTableView.setModel(east_model)
@@ -56,5 +56,5 @@ class AverageVM(average_view.Ui_AverageView):
                 self.eastStdTableView.show()
 
                 # Plot the data
-                plot_thread = plot_data.PlotData(self.parent, ss_config)
+                plot_thread = plot_data.PlotData(self.parent, avg_result_ss_config)
                 plot_thread.start()

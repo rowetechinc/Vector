@@ -2,6 +2,7 @@ from PyQt5.QtCore import QThread
 from rti_python.Utilities.read_binary_file import ReadBinaryFile
 from rti_python.Post_Process.Average.AverageWaterColumn import AverageWaterColumn
 from . import average_result
+import pandas as pd
 
 
 class ProcessAverage:
@@ -23,6 +24,8 @@ class ProcessAverage:
 
         # Dataframe results
         self.results_dict = {}
+
+        self.earth_df = None
 
     def run(self):
         # Process the files

@@ -100,6 +100,7 @@ Installer/build/
 
 # Plots generated
 tests/*.html
+*.html
 
 # Predictor configuration files
 *_RTI_CFG.txt
