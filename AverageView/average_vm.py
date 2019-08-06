@@ -16,17 +16,22 @@ class AverageVM(average_view.Ui_AverageView):
         # Browse button
         self.browseButton.clicked.connect(self.browse_button_click)
 
-        self.num_avg_ens = 5
+        # Set the number of ensembles to average
+        self.num_avg_ens = self.avgNumSpinBox.value()
 
     def browse_button_click(self):
         """
         Button Clicked to open a file browser to select the files to playback.
         :return:
         """
+        # Set the number of ensembles to average
+        self.num_avg_ens = self.avgNumSpinBox.value()
+
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         files, _ = QFileDialog.getOpenFileNames(self.parent, "QFileDialog.getOpenFileNames()", "",
                                                 "Ensemble Files (*.ens);;Binary Files (*.bin);;All Files (*)", options=options)
+
         if files:
             print(files)
             # Process the files

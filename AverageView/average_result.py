@@ -4,6 +4,7 @@ import numpy as np
 from rti_python.Ensemble.Ensemble import Ensemble
 import time
 
+
 class AverageResult:
 
     def __init__(self):
@@ -12,12 +13,16 @@ class AverageResult:
         self.df_earth_north = pd.DataFrame()
         self.df_earth_vertical = pd.DataFrame()
         self.df_earth_error = pd.DataFrame()
-        self.df_earth = pd.DataFrame()              # Accumulate of earth data
-        self.df_mag = pd.DataFrame()                # Accumulate of mag data
-        self.df_dir = pd.DataFrame()                # Accumulate of dir data
+        self.df_earth = pd.DataFrame()              # Accumulate the earth data
+        self.df_mag = pd.DataFrame()                # Accumulate the mag data
+        self.df_dir = pd.DataFrame()                # Accumulate the dir data
+        self.df_bt_range = pd.DataFrame()           # Accumulate the BT Range
+        self.df_avg_bt_range = pd.DataFrame()       # Accumulate the Average Bottom Track Range
         self.prev_dt = None                         # Track ensemble time differences
         self.time_diff = 1                          # Initialize to 1 second
         self.num_bins = 1                           # Initialize number of bins
+        self.ss_code = ""                           # Initialize the code
+        self.ss_config = 0                          # Initialize the config
 
     def update_results(self, awc):
         #print("SS Code: " + str(awc[AverageWaterColumn.INDEX_SS_CODE]))
@@ -32,8 +37,6 @@ class AverageResult:
             df_earth = pd.DataFrame(awc[AverageWaterColumn.INDEX_EARTH], columns=["East", "North", "Vertical", "Error"])
 
             # Replace bad values
-            #east_array = np.array(df_earth['East'].values.tolist())                      # Faster to convert to numpy array and replace BAD_VELOCITY
-            #df_earth['East'] = np.where(east_array > 88, None, east_array).tolist()      # Replace BAD_VELOCITY with None
             df_earth['East'] = self.replace_bad_val_with_none(df_earth['East'])
             df_earth['North'] = self.replace_bad_val_with_none(df_earth['North'])
             df_earth['Vertical'] = self.replace_bad_val_with_none(df_earth['Vertical'])
@@ -63,8 +66,17 @@ class AverageResult:
         # Accumulate the mag data
         self.accum_mag_dir(awc)
 
+        # Accumulate the mag data
+        self.accum_bt_range(awc)
+
         # Set the latest number of bins
         self.num_bins = awc[AverageWaterColumn.INDEX_NUM_BINS]
+
+        # Set the latest ss_code
+        self.ss_code = awc[AverageWaterColumn.INDEX_SS_CODE]
+
+        # Set the latest ss_config
+        self.ss_config = awc[AverageWaterColumn.INDEX_SS_CONFIG]
 
         # Get the latest time diff
         if not self.prev_dt:
@@ -96,7 +108,7 @@ class AverageResult:
         if self.df_earth.empty:
             self.df_earth = df
         else:
-            self.df_earth = pd.concat([self.df_earth, df])
+            self.df_earth = pd.concat([self.df_earth, df], ignore_index=True)
 
     def accum_mag_dir(self, awc):
         """
@@ -132,7 +144,51 @@ class AverageResult:
         if self.df_dir.empty:
             self.df_dir = df_dir
         else:
-            self.df_dir = pd.concat([self.df_dir, df_dir])
+            self.df_dir = pd.concat([self.df_dir, df_dir], ignore_index=True)
+
+    def accum_bt_range(self, awc):
+        """
+        Create the Magnitude dataframe.  This takes all the information
+        from the Magnitude and creates a row in the dataframe for each bin,beam value.
+        :param awc: Average data.
+        :return:
+        """
+        # Convert the east array to df
+        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
+        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
+        df = Ensemble.array_beam_1d_to_df(awc[AverageWaterColumn.INDEX_BT_RANGE],
+                                          awc[AverageWaterColumn.INDEX_LAST_TIME],
+                                          awc[AverageWaterColumn.INDEX_SS_CODE],
+                                          awc[AverageWaterColumn.INDEX_SS_CONFIG])
+
+        # Store the range results
+        if self.df_bt_range.empty:
+            self.df_bt_range = df
+        else:
+            self.df_bt_range = pd.concat([self.df_bt_range, df], ignore_index=True)
+
+        #Average the Bottom Track Range
+        avg_range = Ensemble.get_avg_range(awc[AverageWaterColumn.INDEX_BT_RANGE])
+
+        # Create a dict entry
+        dict_result = {}
+        dict_result[0] = {'time_stamp': awc[AverageWaterColumn.INDEX_LAST_TIME],
+                          'ss_code': awc[AverageWaterColumn.INDEX_SS_CODE],
+                          'ss_config': awc[AverageWaterColumn.INDEX_SS_CONFIG],
+                          'bin_num': 0,
+                          'beam_num': 0,
+                          'bin_depth': avg_range,
+                          'value': avg_range}
+
+        # Create the dataframe from the dictionary
+        # important to set the 'orient' parameter to "index" to make the keys as rows
+        df = pd.DataFrame.from_dict(dict_result, "index")
+
+        # Store the range results
+        if self.df_avg_bt_range.empty:
+            self.df_avg_bt_range = df
+        else:
+            self.df_avg_bt_range = pd.concat([self.df_avg_bt_range, df], ignore_index=True)
 
     def replace_bad_val_with_none(self, df):
         """

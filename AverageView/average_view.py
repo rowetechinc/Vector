@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'AverageView\average_view_.ui'
+# Form implementation generated from reading ui file 'AverageView\average_view.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.0
+# Created by: PyQt5 UI code generator 5.9
 #
 # WARNING! All changes made in this file will be lost!
 
-
 from PyQt5 import QtCore, QtGui, QtWidgets
-
 
 class Ui_AverageView(object):
     def setupUi(self, AverageView):
@@ -18,19 +16,28 @@ class Ui_AverageView(object):
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.formLayout = QtWidgets.QFormLayout()
+        self.formLayout.setObjectName("formLayout")
+        self.label_4 = QtWidgets.QLabel(self.centralwidget)
+        self.label_4.setObjectName("label_4")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label_4)
+        self.avgNumSpinBox = QtWidgets.QSpinBox(self.centralwidget)
+        self.avgNumSpinBox.setMinimumSize(QtCore.QSize(811, 0))
+        self.avgNumSpinBox.setMinimum(1)
+        self.avgNumSpinBox.setMaximum(9999999)
+        self.avgNumSpinBox.setProperty("value", 5)
+        self.avgNumSpinBox.setObjectName("avgNumSpinBox")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.avgNumSpinBox)
+        self.verticalLayout_2.addLayout(self.formLayout)
         self.browseButton = QtWidgets.QPushButton(self.centralwidget)
         self.browseButton.setObjectName("browseButton")
-        self.verticalLayout_2.addWidget(self.browseButton)
-        self.ensDescLabel = QtWidgets.QLabel(self.centralwidget)
-        self.ensDescLabel.setWordWrap(True)
-        self.ensDescLabel.setObjectName("ensDescLabel")
-        self.verticalLayout_2.addWidget(self.ensDescLabel)
+        self.verticalLayout_2.addWidget(self.browseButton, 0, QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.tabWidget = QtWidgets.QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName("tabWidget")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
-        self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.tab)
-        self.verticalLayout_6.setObjectName("verticalLayout_6")
+        self.gridLayout = QtWidgets.QGridLayout(self.tab)
+        self.gridLayout.setObjectName("gridLayout")
         self.verticalLayout_5 = QtWidgets.QVBoxLayout()
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.label_3 = QtWidgets.QLabel(self.tab)
@@ -39,7 +46,7 @@ class Ui_AverageView(object):
         self.eastStdTableView = QtWidgets.QTableView(self.tab)
         self.eastStdTableView.setObjectName("eastStdTableView")
         self.verticalLayout_5.addWidget(self.eastStdTableView)
-        self.verticalLayout_6.addLayout(self.verticalLayout_5)
+        self.gridLayout.addLayout(self.verticalLayout_5, 0, 0, 1, 1)
         self.verticalLayout_4 = QtWidgets.QVBoxLayout()
         self.verticalLayout_4.setObjectName("verticalLayout_4")
         self.label_2 = QtWidgets.QLabel(self.tab)
@@ -48,7 +55,7 @@ class Ui_AverageView(object):
         self.eastAvgTableView = QtWidgets.QTableView(self.tab)
         self.eastAvgTableView.setObjectName("eastAvgTableView")
         self.verticalLayout_4.addWidget(self.eastAvgTableView)
-        self.verticalLayout_6.addLayout(self.verticalLayout_4)
+        self.gridLayout.addLayout(self.verticalLayout_4, 1, 0, 1, 1)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QtWidgets.QLabel(self.tab)
@@ -57,7 +64,7 @@ class Ui_AverageView(object):
         self.eastTableView = QtWidgets.QTableView(self.tab)
         self.eastTableView.setObjectName("eastTableView")
         self.verticalLayout.addWidget(self.eastTableView)
-        self.verticalLayout_6.addLayout(self.verticalLayout)
+        self.gridLayout.addLayout(self.verticalLayout, 2, 0, 1, 1)
         self.tabWidget.addTab(self.tab, "")
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
@@ -90,8 +97,8 @@ class Ui_AverageView(object):
     def retranslateUi(self, AverageView):
         _translate = QtCore.QCoreApplication.translate
         AverageView.setWindowTitle(_translate("AverageView", "MainWindow"))
+        self.label_4.setText(_translate("AverageView", "Number Ensembles to Average"))
         self.browseButton.setText(_translate("AverageView", "Browse"))
-        self.ensDescLabel.setText(_translate("AverageView", "TextLabel"))
         self.label_3.setText(_translate("AverageView", "Bin Standard Deviation"))
         self.label_2.setText(_translate("AverageView", "Bin Average"))
         self.label.setText(_translate("AverageView", "Averaged Data"))
@@ -109,3 +116,4 @@ if __name__ == "__main__":
     ui.setupUi(AverageView)
     AverageView.show()
     sys.exit(app.exec_())
+
