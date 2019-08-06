@@ -2,7 +2,7 @@ import pandas as pd
 from rti_python.Post_Process.Average.AverageWaterColumn import AverageWaterColumn
 import numpy as np
 from rti_python.Ensemble.Ensemble import Ensemble
-
+import time
 
 class AverageResult:
 
@@ -14,15 +14,16 @@ class AverageResult:
         self.df_earth_error = pd.DataFrame()
         self.df_earth = pd.DataFrame()              # Accumulate of earth data
         self.prev_dt = None                         # Track ensemble time differences
-        self.time_diff = 1                          # Intitialize to 1 second
+        self.time_diff = 1                          # Initialize to 1 second
+        self.num_bins = 1                           # Initialize number of bins
 
     def update_results(self, awc):
-        print("SS Code: " + str(awc[AverageWaterColumn.INDEX_SS_CODE]))
-        print("SS Config: " + str(awc[AverageWaterColumn.INDEX_SS_CONFIG]))
-        print("first time: " + str(awc[AverageWaterColumn.INDEX_FIRST_TIME]))
-        print("last time: " + str(awc[AverageWaterColumn.INDEX_LAST_TIME]))
-        print("Num Beams: " + str(awc[AverageWaterColumn.INDEX_NUM_BEAM]))
-        print("Num Bins: " + str(awc[AverageWaterColumn.INDEX_NUM_BINS]))
+        #print("SS Code: " + str(awc[AverageWaterColumn.INDEX_SS_CODE]))
+        #print("SS Config: " + str(awc[AverageWaterColumn.INDEX_SS_CONFIG]))
+        #print("first time: " + str(awc[AverageWaterColumn.INDEX_FIRST_TIME]))
+        #print("last time: " + str(awc[AverageWaterColumn.INDEX_LAST_TIME]))
+        #print("Num Beams: " + str(awc[AverageWaterColumn.INDEX_NUM_BEAM]))
+        #print("Num Bins: " + str(awc[AverageWaterColumn.INDEX_NUM_BINS]))
 
         if awc[AverageWaterColumn.INDEX_NUM_BEAM] == 4:
             # Create Dataframe
@@ -57,6 +58,9 @@ class AverageResult:
         # Accumulate the velocity data
         self.accum_earth_vel(awc)
 
+        # Set the latest number of bins
+        self.num_bins = awc[AverageWaterColumn.INDEX_NUM_BINS]
+
         # Get the latest time diff
         if not self.prev_dt:
             self.prev_dt = awc[AverageWaterColumn.INDEX_LAST_TIME]
@@ -67,6 +71,12 @@ class AverageResult:
         #self.time_diff = awc[AverageWaterColumn.INDEX_LAST_TIME] - awc[AverageWaterColumn.INDEX_FIRST_TIME]
 
     def accum_earth_vel(self, awc):
+        """
+        Create the Earth Velocity dataframe.  This takes all the information
+        from the earth velocity and creates a row in the dataframe for each bin,beam value.
+        :param awc: Average data.
+        :return:
+        """
         # Convert the east array to df
         # params: vel_array, dt, ss_code, ss_config, blank, bin_size
         # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
