@@ -23,6 +23,7 @@ class AverageResult:
         self.num_bins = 1                           # Initialize number of bins
         self.ss_code = ""                           # Initialize the code
         self.ss_config = 0                          # Initialize the config
+        self.is_upward = False                      # Orientation of the ADCP
 
     def update_results(self, awc):
         #print("SS Code: " + str(awc[AverageWaterColumn.INDEX_SS_CODE]))
@@ -84,6 +85,9 @@ class AverageResult:
         else:
             self.time_diff = awc[AverageWaterColumn.INDEX_LAST_TIME] - self.prev_dt
             self.prev_dt = awc[AverageWaterColumn.INDEX_LAST_TIME]
+
+        # Set Orientation
+        self.is_upward = awc[AverageWaterColumn.INDEX_IS_UPWARD]
 
         #self.time_diff = awc[AverageWaterColumn.INDEX_LAST_TIME] - awc[AverageWaterColumn.INDEX_FIRST_TIME]
 

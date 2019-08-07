@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from PyQt5 import QtCore
 from rti_python.Ensemble.Ensemble import Ensemble
 from rti_python.Post_Process.Average.AverageWaterColumn import AverageWaterColumn
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, Title
 from bokeh.layouts import grid, column
 
 
@@ -40,7 +40,7 @@ class PlotData(QtCore.QThread):
         plt.legend(loc='best')
         plt.show()
 
-    def plot_bokeh_avg_earth_east_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins):
+    def plot_bokeh_avg_earth_east_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins, is_upward):
         # Convert the east array to df
         # params: vel_array, dt, ss_code, ss_config, blank, bin_size
         # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
@@ -50,9 +50,11 @@ class PlotData(QtCore.QThread):
 
         source = ColumnDataSource(df_east)
 
+        # Find the min and max bin depth for the Y axis
+        # Set the height as the distance between a bin
         bin_depth_min = df_east.bin_depth.min()
-        bin_depths_max = df_east.bin_depth.max()
-        height = ((bin_depths_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
+        bin_depth_max = df_east.bin_depth.max()
+        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
 
         # Multiple by 1000 to get it in the same scale
         # Multiple by 1.1 to get rid of the grid line
@@ -62,28 +64,41 @@ class PlotData(QtCore.QThread):
         # Create a mapping between min and max value and the colors
         mapper = LinearColorMapper(palette="Viridis256", low=earth_vel.value.min(), high=earth_vel.value.max())
 
+        # Create the figure with a datetime x axis
         plot = figure(title="East Velocity", x_axis_type='datetime')
 
-        plot.rect(x='time_stamp', y='bin_depth', source=source, width=time_width, height=height, fill_color={'field': 'value', 'transform': mapper}, line_color=None)
+        # Create the heatmap
+        plot.rect(x='time_stamp',
+                  y='bin_depth',
+                  source=source,
+                  width=time_width,
+                  height=height,
+                  fill_color={'field': 'value', 'transform': mapper},
+                  line_color=None)
 
         if not bt_range.empty:
             # Create Bottom Track Line
             # Create Y1 as the line on the bottom
             # y2 will be all the bottom track range values
             x = bt_range['time_stamp']
-            y1 = [0] * len(bt_range.value)
+            y1 = [bin_depth_max] * len(bt_range.value)
             y2 = bt_range['value']
             plot.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)  # Shaded area
             plot.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)  # Line
 
-        # Remove the padding
-        plot.x_range.range_padding = plot.y_range.range_padding = 0
+        # Set the plot upward or downward looking
+        if is_upward:
+            plot.y_range.range_padding = 0  # Upward looking
+        else:
+            plot.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
+        plot.x_range.range_padding = 0
 
         color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
                              ticker=BasicTicker(desired_num_ticks=6),
                              formatter=PrintfTickFormatter(format="%.1fm/s"),
                              label_standoff=6, border_line_color=None, location=(0, 0))
 
+        # Add the tooltip
         hover = HoverTool(
             tooltips=[
                 ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
@@ -100,11 +115,12 @@ class PlotData(QtCore.QThread):
         )
         plot.add_tools(hover)
 
+        # Create the heatmap and the color bar
         plot.add_layout(color_bar, 'right')
 
         return plot
 
-    def plot_bokeh_avg_earth_north_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins):
+    def plot_bokeh_avg_earth_north_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins, is_upward):
         # Convert the east array to df
         # params: vel_array, dt, ss_code, ss_config, blank, bin_size
         # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
@@ -113,8 +129,8 @@ class PlotData(QtCore.QThread):
         df_north = earth_vel[earth_vel['beam_num'] == 1].reset_index(drop=True)
 
         bin_depth_min = df_north.bin_depth.min()
-        bin_depths_max = df_north.bin_depth.max()
-        height = ((bin_depths_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
+        bin_depth_max = df_north.bin_depth.max()
+        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
 
         # Multiple by 1000 to get it in the same scale
         # Multiple by 1.1 to get rid of the grid line
@@ -140,7 +156,12 @@ class PlotData(QtCore.QThread):
             plot.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)  # Shaded area
             plot.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)  # Line
 
-        plot.x_range.range_padding = plot.y_range.range_padding = 0
+        # Set the plot upward or downward looking
+        if is_upward:
+            plot.y_range.range_padding = 0  # Upward looking
+        else:
+            plot.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
+        plot.x_range.range_padding = 0
 
         color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
                              ticker=BasicTicker(desired_num_ticks=6),
@@ -167,7 +188,7 @@ class PlotData(QtCore.QThread):
 
         return plot
 
-    def plot_bokeh_avg_earth_vertical_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins):
+    def plot_bokeh_avg_earth_vertical_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins, is_upward):
         # Convert the east array to df
         # params: vel_array, dt, ss_code, ss_config, blank, bin_size
         # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
@@ -176,8 +197,8 @@ class PlotData(QtCore.QThread):
         df_vertical = earth_vel[earth_vel['beam_num'] == 2].reset_index(drop=True)
 
         bin_depth_min = df_vertical.bin_depth.min()
-        bin_depths_max = df_vertical.bin_depth.max()
-        height = ((bin_depths_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
+        bin_depth_max = df_vertical.bin_depth.max()
+        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
 
         # Multiple by 1000 to get it in the same scale
         # Multiple by 1.1 to get rid of the grid line
@@ -203,7 +224,12 @@ class PlotData(QtCore.QThread):
             plot.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)  # Shaded area
             plot.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)  # Line
 
-        plot.x_range.range_padding = plot.y_range.range_padding = 0
+        # Set the plot upward or downward looking
+        if is_upward:
+            plot.y_range.range_padding = 0  # Upward looking
+        else:
+            plot.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
+        plot.x_range.range_padding = 0
 
         color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
                              ticker=BasicTicker(desired_num_ticks=6),
@@ -230,7 +256,7 @@ class PlotData(QtCore.QThread):
 
         return plot
 
-    def plot_bokeh_mag_heatmap(self, mag, bt_range, ens_time_sec, num_bins):
+    def plot_bokeh_mag_heatmap(self, mag, bt_range, ens_time_sec, num_bins, is_upward):
         """
         Create a water magnitude heatmap plot.
         Use the bottom range plot to create the bottom track line.
@@ -246,11 +272,11 @@ class PlotData(QtCore.QThread):
         # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
 
         bin_depth_min = mag.bin_depth.min()
-        bin_depths_max = mag.bin_depth.max()
-        height = ((bin_depths_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
+        bin_depth_max = mag.bin_depth.max()
+        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
 
         # Multiple by 1000 to get it in the same scale
-        # Multiple by 1.1 to get rid of the grid line
+        # Multiple by scale_factor to get rid of the grid line
         time_width = ens_time_sec * 1000 * self.scale_factor_remove_gridline
         print("Mag Plot Bin Width: " + str(time_width) + " Height: " + str(height))
 
@@ -260,20 +286,30 @@ class PlotData(QtCore.QThread):
         p = figure(title="Water Velocity",
                    x_axis_type='datetime')
 
-        p.rect(x='time_stamp', y='bin_depth', source=mag, width=time_width, height=height,
-               fill_color={'field': 'value', 'transform': mapper}, line_color=None)
+        p.rect(x='time_stamp',
+               y='bin_depth',
+               source=mag,
+               width=time_width,
+               height=height,
+               fill_color={'field': 'value', 'transform': mapper},
+               line_color=None)
 
         if not bt_range.empty:
             # Create Bottom Track Line
             # Create Y1 as the line on the bottom
             # y2 will be all the bottom track range values
             x = bt_range['time_stamp']
-            y1 = [0] * len(bt_range.value)
+            y1 = [bin_depth_max] * len(bt_range.value)
             y2 = bt_range['value']
             p.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)              # Shaded area
             p.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)    # Line
 
-            p.x_range.range_padding = p.y_range.range_padding = 0
+            # Set the plot upward or downward looking
+            if is_upward:
+                p.y_range.range_padding = 0                             # Upward looking
+            else:
+                p.y_range = Range1d(bin_depth_max, bin_depth_min)       # Downward looking
+            p.x_range.range_padding = 0
 
             color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
                                  ticker=BasicTicker(desired_num_ticks=6),
@@ -300,14 +336,14 @@ class PlotData(QtCore.QThread):
 
         return p
 
-    def plot_bokeh_dir_heatmap(self, dir, bt_range, ens_time_sec, num_bins):
+    def plot_bokeh_dir_heatmap(self, dir, bt_range, ens_time_sec, num_bins, is_upward):
         # Convert the east array to df
         # params: vel_array, dt, ss_code, ss_config, blank, bin_size
         # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
 
         bin_depth_min = dir.bin_depth.min()
-        bin_depths_max = dir.bin_depth.max()
-        height = ((bin_depths_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
+        bin_depth_max = dir.bin_depth.max()
+        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
 
         # Multiple by 1000 to get it in the same scale
         # Multiple by 1.1 to get rid of the grid line
@@ -333,7 +369,12 @@ class PlotData(QtCore.QThread):
             p.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)              # Shaded area
             p.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)    # Line
 
-        p.x_range.range_padding = p.y_range.range_padding = 0
+        # Set the plot upward or downward looking
+        if is_upward:
+            p.y_range.range_padding = 0  # Upward looking
+        else:
+            p.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
+        p.x_range.range_padding = 0
 
         color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
                              ticker=BasicTicker(desired_num_ticks=6),
@@ -360,38 +401,163 @@ class PlotData(QtCore.QThread):
 
         return p
 
-    def plot_bokeh(self, awc):
+    def plot_bokeh_heatmap(self,
+                           df,
+                           vel_min,
+                           vel_max,
+                           bt_range,
+                           ens_time_sec,
+                           num_bins,
+                           is_upward,
+                           plot_title,
+                           value_scale="m/s",
+                           color_palette="Viridis256",
+                           bt_color="#737373",
+                           bt_alpha=0.85,
+                           bt_line_color="red"):
+        """
+        Create a heatmap plot.  This will create a heatmap for velocites.  It will use the colormap
+        palette to map the colors to the min and max value in the df "value" column.  If bottom track data is available,
+        it will show the bottom track value.  It will flip the plot if the data is upward or downward.
+        :param df: Dataframe contain a "time_stamp", "value", "bin_depth" columns.
+        :param bt_range: Bottom Track Range dataframe "time_stamp", "value" columns.
+        :param ens_time_sec: Time between ensembles used to create a block size for each bin.
+        :param num_bins: Number of bins.
+        :param is_upward: Flag for upward or downward.
+        :param plot_title: Title of the plot.
+        :param value_scale: Title for the scale of the value column.  Default: m/s
+        :param color_palette: Color Palette.  Default: Viridis256
+        :return: Plot figure with heatmap, bottom track line and shade and colorbar.
+        """
+
+        # Convert the east array to df
+        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
+        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
+
+        # Find the min and max value for the bin depth
+        # Create a height based off the bin size
+        bin_depth_min = df.bin_depth.min()
+        bin_depth_max = df.bin_depth.max()
+        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
+
+        # Multiple by 1000 to get it in the same scale
+        # Multiple by scale_factor to get rid of the grid line
+        time_width = ens_time_sec * 1000 * self.scale_factor_remove_gridline
+
+        # Create a mapping between min and max value and the colors
+        mapper = LinearColorMapper(palette=color_palette, low=vel_min, high=vel_max)
+
+        # Create the figure with plot title and datetime x axis
+        p = figure(title=plot_title,
+                   x_axis_type='datetime')
+
+        # Create a heatmap
+        p.rect(x='time_stamp',
+               y='bin_depth',
+               source=df,
+               width=time_width,
+               height=height,
+               fill_color={'field': 'value', 'transform': mapper},
+               line_color=None)
+
+        # Create a Bottom Track line and shade
+        if not bt_range.empty:
+            # Create Bottom Track Line
+            # Create Y1 as the line on the bottom
+            # y2 will be all the bottom track range values
+            x = bt_range['time_stamp']
+            y1 = [bin_depth_max] * len(bt_range.value)
+            y2 = bt_range['value']
+            p.varea(x=x, y1=y1, y2=y2, fill_color=bt_color, fill_alpha=bt_alpha)              # Shaded area
+            p.line(x=x, y=y2, line_color=bt_line_color, line_width=2, line_alpha=bt_alpha)    # Line
+
+        # Set the plot upward or downward looking
+        if is_upward:
+            p.y_range.range_padding = 0                             # Upward looking
+        else:
+            p.y_range = Range1d(bin_depth_max, bin_depth_min)       # Downward looking
+        p.x_range.range_padding = 0
+
+        # Create a colorbar
+        color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
+                             ticker=BasicTicker(desired_num_ticks=6),
+                             formatter=PrintfTickFormatter(format="%.1f" + value_scale),
+                             label_standoff=6, border_line_color=None, location=(0, 0))
+
+        # Create Tooltip
+        hover = HoverTool(
+            tooltips=[
+                ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
+                #("Value", "@value  $color[swatch]:value"),
+                ("Value", "@value " + value_scale),
+                ("Depth", "@bin_depth m"),
+                ("Bin", "@bin_num"),
+                ("SS Code", "@ss_code"),
+                ("SS Config", "@ss_config")
+            ],
+            formatters={
+                'time_stamp': 'datetime'
+            },
+        )
+        p.add_tools(hover)
+
+        # Add colorbar to plot
+        p.add_layout(color_bar, 'right')
+
+        return p
+
+    def plot_bokeh(self, avg_result):
         """
         Plot the data with the given layout.
-        :param awc: Average Results.
+        :param avg_result: Average Results.
         :return:
         """
         # Set the variables
-        earth_vel = awc.df_earth
-        mag = awc.df_mag
-        bt_range = awc.df_avg_bt_range
-        dir = awc.df_dir
-        ens_time_sec = awc.time_diff.seconds
-        num_bins = awc.num_bins
-        ss_code = awc.ss_code
-        ss_config = awc.ss_config
+        df_east = avg_result.df_earth[avg_result.df_earth['beam_num'] == 0].reset_index(drop=True)
+        df_north = avg_result.df_earth[avg_result.df_earth['beam_num'] == 1].reset_index(drop=True)
+        df_vertical = avg_result.df_earth[avg_result.df_earth['beam_num'] == 2].reset_index(drop=True)
+        df_error = avg_result.df_earth[avg_result.df_earth['beam_num'] == 3].reset_index(drop=True)
+        df_mag = avg_result.df_mag
+        bt_range = avg_result.df_avg_bt_range
+        df_dir = avg_result.df_dir
+        ens_time_sec = avg_result.time_diff.seconds
+        num_bins = avg_result.num_bins
+        ss_code = avg_result.ss_code
+        ss_config = avg_result.ss_config
+        is_upward = avg_result.is_upward
+
+        # Get the min and max velocity
+        min_earth = avg_result.df_earth['value'].min()
+        max_earth = avg_result.df_earth['value'].max()
+        min_mag = avg_result.df_mag['value'].min()
+        max_mag = avg_result.df_mag['value'].max()
+        min_vel = min(min_earth, min_mag)
+        max_vel = max(max_earth, max_mag)
+
 
         # Create the file name and output
         self.earth_plot_file_name = "plots_water_" + str(ss_code) + "_" + str(ss_config) + ".html"
         output_file(self.earth_plot_file_name)
 
         # Get the plots
-        mag_plot = self.plot_bokeh_mag_heatmap(mag, bt_range, ens_time_sec, num_bins)
-        dir_plot = self.plot_bokeh_dir_heatmap(dir, bt_range, ens_time_sec, num_bins)
-        east_plot = self.plot_bokeh_avg_earth_east_heatmap(earth_vel, bt_range, ens_time_sec, num_bins)
-        north_plot = self.plot_bokeh_avg_earth_north_heatmap(earth_vel, bt_range, ens_time_sec, num_bins)
-        vert_plot = self.plot_bokeh_avg_earth_vertical_heatmap(earth_vel, bt_range, ens_time_sec, num_bins)
+        #mag_plot = self.plot_bokeh_mag_heatmap(mag, bt_range, ens_time_sec, num_bins, is_upward)
+        #dir_plot = self.plot_bokeh_dir_heatmap(dir, bt_range, ens_time_sec, num_bins, is_upward)
+        mag_plot = self.plot_bokeh_heatmap(df_mag, min_vel, max_vel, bt_range, ens_time_sec, num_bins, is_upward, "Water Velocity", "m/s")
+        dir_plot = self.plot_bokeh_heatmap(df_dir, df_dir['value'].min(), df_dir['value'].max(), bt_range, ens_time_sec, num_bins, is_upward, "Water Direction", "deg")
+        east_plot = self.plot_bokeh_heatmap(df_east, min_vel, max_vel, bt_range, ens_time_sec, num_bins, is_upward, "East Velocity", "m/s")
+        north_plot = self.plot_bokeh_heatmap(df_north, min_vel, max_vel, bt_range, ens_time_sec, num_bins, is_upward, "North Velocity", "m/s")
+        vert_plot = self.plot_bokeh_heatmap(df_vertical, df_vertical['value'].min(), df_vertical['value'].max(), bt_range, ens_time_sec, num_bins, is_upward, "Vertical Velocity", "m/s")
+        error_plot = self.plot_bokeh_heatmap(df_error, df_error['value'].min(), df_error['value'].max(), bt_range, ens_time_sec, num_bins, is_upward, "Error Velocity", "m/s")
+
+        # Add addtional title
+        #p.add_layout(Title(text="Subsystem: SubsystemConfig", align="center"), "top")
 
         # Set the layout of the plot webpage
         lo = grid([
             [mag_plot],
             [dir_plot],
-            [east_plot, north_plot, vert_plot]
+            [east_plot, north_plot],
+            [vert_plot, error_plot]
             ], sizing_mode='stretch_both')
 
         show(lo)
