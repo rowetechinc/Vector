@@ -29,7 +29,6 @@ class PlotData(QtCore.QThread):
         #self.plot_mpl_avg_east_std_mean(self.avg_result.df_earth_east)
         self.plot_bokeh(self.avg_result)
 
-
     def plot_mpl_avg_east_std_mean(self, east_df):
         east_mean = east_df.mean()
         east_std = east_df.std()
@@ -39,367 +38,6 @@ class PlotData(QtCore.QThread):
         east_std.plot(kind='line', label='STD')
         plt.legend(loc='best')
         plt.show()
-
-    def plot_bokeh_avg_earth_east_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins, is_upward):
-        # Convert the east array to df
-        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
-        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
-
-        # Select just the East value
-        df_east = earth_vel[earth_vel['beam_num'] == 0].reset_index(drop=True)
-
-        source = ColumnDataSource(df_east)
-
-        # Find the min and max bin depth for the Y axis
-        # Set the height as the distance between a bin
-        bin_depth_min = df_east.bin_depth.min()
-        bin_depth_max = df_east.bin_depth.max()
-        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
-
-        # Multiple by 1000 to get it in the same scale
-        # Multiple by 1.1 to get rid of the grid line
-        time_width = ens_time_sec * 1000 * self.scale_factor_remove_gridline
-        print("East Plot Bin Width: " + str(time_width) + " Height: " + str(height))
-
-        # Create a mapping between min and max value and the colors
-        mapper = LinearColorMapper(palette="Viridis256", low=earth_vel.value.min(), high=earth_vel.value.max())
-
-        # Create the figure with a datetime x axis
-        plot = figure(title="East Velocity", x_axis_type='datetime')
-
-        # Create the heatmap
-        plot.rect(x='time_stamp',
-                  y='bin_depth',
-                  source=source,
-                  width=time_width,
-                  height=height,
-                  fill_color={'field': 'value', 'transform': mapper},
-                  line_color=None)
-
-        if not bt_range.empty:
-            # Create Bottom Track Line
-            # Create Y1 as the line on the bottom
-            # y2 will be all the bottom track range values
-            x = bt_range['time_stamp']
-            y1 = [bin_depth_max] * len(bt_range.value)
-            y2 = bt_range['value']
-            plot.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)  # Shaded area
-            plot.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)  # Line
-
-        # Set the plot upward or downward looking
-        if is_upward:
-            plot.y_range.range_padding = 0  # Upward looking
-        else:
-            plot.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
-        plot.x_range.range_padding = 0
-
-        color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
-                             ticker=BasicTicker(desired_num_ticks=6),
-                             formatter=PrintfTickFormatter(format="%.1fm/s"),
-                             label_standoff=6, border_line_color=None, location=(0, 0))
-
-        # Add the tooltip
-        hover = HoverTool(
-            tooltips=[
-                ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
-                #("Value", "@value  $color[swatch]:value"),
-                ("Value", "@value m/s"),
-                ("Depth", "@bin_depth m"),
-                ("Bin", "@bin_num"),
-                ("SS Code", "@ss_code"),
-                ("SS Config", "@ss_config")
-            ],
-            formatters={
-                'time_stamp': 'datetime'
-            },
-        )
-        plot.add_tools(hover)
-
-        # Create the heatmap and the color bar
-        plot.add_layout(color_bar, 'right')
-
-        return plot
-
-    def plot_bokeh_avg_earth_north_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins, is_upward):
-        # Convert the east array to df
-        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
-        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
-
-        # Select just the North value
-        df_north = earth_vel[earth_vel['beam_num'] == 1].reset_index(drop=True)
-
-        bin_depth_min = df_north.bin_depth.min()
-        bin_depth_max = df_north.bin_depth.max()
-        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
-
-        # Multiple by 1000 to get it in the same scale
-        # Multiple by 1.1 to get rid of the grid line
-        time_width = ens_time_sec * 1000 * self.scale_factor_remove_gridline
-        print("North Plot Bin Width: " + str(time_width) + " Height: " + str(height))
-
-        # Create a mapping between min and max value and the colors
-        mapper = LinearColorMapper(palette="Viridis256", low=earth_vel.value.min(), high=earth_vel.value.max())
-
-        plot = figure(title="North Velocity",
-                   x_axis_type='datetime')
-
-        plot.rect(x='time_stamp', y='bin_depth', source=df_north, width=time_width, height=height,
-               fill_color={'field': 'value', 'transform': mapper}, line_color=None)
-
-        if not bt_range.empty:
-            # Create Bottom Track Line
-            # Create Y1 as the line on the bottom
-            # y2 will be all the bottom track range values
-            x = bt_range['time_stamp']
-            y1 = [0] * len(bt_range.value)
-            y2 = bt_range['value']
-            plot.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)  # Shaded area
-            plot.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)  # Line
-
-        # Set the plot upward or downward looking
-        if is_upward:
-            plot.y_range.range_padding = 0  # Upward looking
-        else:
-            plot.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
-        plot.x_range.range_padding = 0
-
-        color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
-                             ticker=BasicTicker(desired_num_ticks=6),
-                             formatter=PrintfTickFormatter(format="%.1fm/s"),
-                             label_standoff=6, border_line_color=None, location=(0, 0))
-
-        hover = HoverTool(
-            tooltips=[
-                ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
-                #("Value", "@value  $color[swatch]:value"),
-                ("Value", "@value m/s"),
-                ("Depth", "@bin_depth m"),
-                ("Bin", "@bin_num"),
-                ("SS Code", "@ss_code"),
-                ("SS Config", "@ss_config")
-            ],
-            formatters={
-                'time_stamp': 'datetime'
-            },
-        )
-        plot.add_tools(hover)
-
-        plot.add_layout(color_bar, 'right')
-
-        return plot
-
-    def plot_bokeh_avg_earth_vertical_heatmap(self, earth_vel, bt_range, ens_time_sec, num_bins, is_upward):
-        # Convert the east array to df
-        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
-        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
-
-        # Select just the East value
-        df_vertical = earth_vel[earth_vel['beam_num'] == 2].reset_index(drop=True)
-
-        bin_depth_min = df_vertical.bin_depth.min()
-        bin_depth_max = df_vertical.bin_depth.max()
-        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
-
-        # Multiple by 1000 to get it in the same scale
-        # Multiple by 1.1 to get rid of the grid line
-        time_width = ens_time_sec * 1000 * self.scale_factor_remove_gridline
-        print("Vert Plot Bin Width: " + str(time_width) + " Height: " + str(height))
-
-        # Create a mapping between min and max value and the colors
-        mapper = LinearColorMapper(palette="Viridis256", low=earth_vel.value.min(), high=earth_vel.value.max())
-
-        plot = figure(title="Vertical Velocity",
-                   x_axis_type='datetime')
-
-        plot.rect(x='time_stamp', y='bin_depth', source=df_vertical, width=time_width, height=height,
-               fill_color={'field': 'value', 'transform': mapper}, line_color=None)
-
-        if not bt_range.empty:
-            # Create Bottom Track Line
-            # Create Y1 as the line on the bottom
-            # y2 will be all the bottom track range values
-            x = bt_range['time_stamp']
-            y1 = [0] * len(bt_range.value)
-            y2 = bt_range['value']
-            plot.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)  # Shaded area
-            plot.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)  # Line
-
-        # Set the plot upward or downward looking
-        if is_upward:
-            plot.y_range.range_padding = 0  # Upward looking
-        else:
-            plot.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
-        plot.x_range.range_padding = 0
-
-        color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
-                             ticker=BasicTicker(desired_num_ticks=6),
-                             formatter=PrintfTickFormatter(format="%.1fm/s"),
-                             label_standoff=6, border_line_color=None, location=(0, 0))
-
-        hover = HoverTool(
-            tooltips=[
-                ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
-                #("Value", "@value  $color[swatch]:value"),
-                ("Value", "@value m/s"),
-                ("Depth", "@bin_depth m"),
-                ("Bin", "@bin_num"),
-                ("SS Code", "@ss_code"),
-                ("SS Config", "@ss_config")
-            ],
-            formatters={
-                'time_stamp': 'datetime'
-            },
-        )
-        plot.add_tools(hover)
-
-        plot.add_layout(color_bar, 'right')
-
-        return plot
-
-    def plot_bokeh_mag_heatmap(self, mag, bt_range, ens_time_sec, num_bins, is_upward):
-        """
-        Create a water magnitude heatmap plot.
-        Use the bottom range plot to create the bottom track line.
-        :param mag:
-        :param bt_range:
-        :param ens_time_sec:
-        :param num_bins:
-        :return:
-        """
-
-        # Convert the east array to df
-        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
-        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
-
-        bin_depth_min = mag.bin_depth.min()
-        bin_depth_max = mag.bin_depth.max()
-        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
-
-        # Multiple by 1000 to get it in the same scale
-        # Multiple by scale_factor to get rid of the grid line
-        time_width = ens_time_sec * 1000 * self.scale_factor_remove_gridline
-        print("Mag Plot Bin Width: " + str(time_width) + " Height: " + str(height))
-
-        # Create a mapping between min and max value and the colors
-        mapper = LinearColorMapper(palette="Viridis256", low=mag.value.min(), high=mag.value.max())
-
-        p = figure(title="Water Velocity",
-                   x_axis_type='datetime')
-
-        p.rect(x='time_stamp',
-               y='bin_depth',
-               source=mag,
-               width=time_width,
-               height=height,
-               fill_color={'field': 'value', 'transform': mapper},
-               line_color=None)
-
-        if not bt_range.empty:
-            # Create Bottom Track Line
-            # Create Y1 as the line on the bottom
-            # y2 will be all the bottom track range values
-            x = bt_range['time_stamp']
-            y1 = [bin_depth_max] * len(bt_range.value)
-            y2 = bt_range['value']
-            p.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)              # Shaded area
-            p.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)    # Line
-
-            # Set the plot upward or downward looking
-            if is_upward:
-                p.y_range.range_padding = 0                             # Upward looking
-            else:
-                p.y_range = Range1d(bin_depth_max, bin_depth_min)       # Downward looking
-            p.x_range.range_padding = 0
-
-            color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
-                                 ticker=BasicTicker(desired_num_ticks=6),
-                                 formatter=PrintfTickFormatter(format="%.1fm/s"),
-                                 label_standoff=6, border_line_color=None, location=(0, 0))
-
-        hover = HoverTool(
-            tooltips=[
-                ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
-                #("Value", "@value  $color[swatch]:value"),
-                ("Value", "@value m/s"),
-                ("Depth", "@bin_depth m"),
-                ("Bin", "@bin_num"),
-                ("SS Code", "@ss_code"),
-                ("SS Config", "@ss_config")
-            ],
-            formatters={
-                'time_stamp': 'datetime'
-            },
-        )
-        p.add_tools(hover)
-
-        p.add_layout(color_bar, 'right')
-
-        return p
-
-    def plot_bokeh_dir_heatmap(self, dir, bt_range, ens_time_sec, num_bins, is_upward):
-        # Convert the east array to df
-        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
-        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
-
-        bin_depth_min = dir.bin_depth.min()
-        bin_depth_max = dir.bin_depth.max()
-        height = ((bin_depth_max - bin_depth_min) / num_bins) * self.scale_factor_remove_gridline
-
-        # Multiple by 1000 to get it in the same scale
-        # Multiple by 1.1 to get rid of the grid line
-        time_width = ens_time_sec * 1000 * self.scale_factor_remove_gridline
-        print("Dir Plot Bin Width: " + str(time_width) + " Height: " + str(height))
-
-        # Create a mapping between min and max value and the colors
-        mapper = LinearColorMapper(palette="Viridis256", low=dir.value.min(), high=dir.value.max())
-
-        p = figure(title="Water Direction",
-                   x_axis_type='datetime')
-
-        p.rect(x='time_stamp', y='bin_depth', source=dir, width=time_width, height=height,
-               fill_color={'field': 'value', 'transform': mapper}, line_color=None)
-
-        if not bt_range.empty:
-            # Create Bottom Track Line
-            # Create Y1 as the line on the bottom
-            # y2 will be all the bottom track range values
-            x = bt_range['time_stamp']
-            y1 = [0] * len(bt_range.value)
-            y2 = bt_range['value']
-            p.varea(x=x, y1=y1, y2=y2, fill_color=self.bt_color, fill_alpha=self.bt_alpha)              # Shaded area
-            p.line(x=x, y=y2, line_color=self.bt_line_color, line_width=2, line_alpha=self.bt_alpha)    # Line
-
-        # Set the plot upward or downward looking
-        if is_upward:
-            p.y_range.range_padding = 0  # Upward looking
-        else:
-            p.y_range = Range1d(bin_depth_max, bin_depth_min)  # Downward looking
-        p.x_range.range_padding = 0
-
-        color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="6pt",
-                             ticker=BasicTicker(desired_num_ticks=6),
-                             formatter=PrintfTickFormatter(format="%.1f deg"),
-                             label_standoff=6, border_line_color=None, location=(0, 0))
-
-        hover = HoverTool(
-            tooltips=[
-                ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
-                #("Value", "@value  $color[swatch]:value"),
-                ("Value", "@value deg"),
-                ("Depth", "@bin_depth m"),
-                ("Bin", "@bin_num"),
-                ("SS Code", "@ss_code"),
-                ("SS Config", "@ss_config")
-            ],
-            formatters={
-                'time_stamp': 'datetime'
-            },
-        )
-        p.add_tools(hover)
-
-        p.add_layout(color_bar, 'right')
-
-        return p
 
     def plot_bokeh_heatmap(self,
                            df,
@@ -420,6 +58,8 @@ class PlotData(QtCore.QThread):
         palette to map the colors to the min and max value in the df "value" column.  If bottom track data is available,
         it will show the bottom track value.  It will flip the plot if the data is upward or downward.
         :param df: Dataframe contain a "time_stamp", "value", "bin_depth" columns.
+        :param vel_min: Minimum Velocity for the color bar.
+        :param vel_max: Maximum velocity for the color bar.
         :param bt_range: Bottom Track Range dataframe "time_stamp", "value" columns.
         :param ens_time_sec: Time between ensembles used to create a block size for each bin.
         :param num_bins: Number of bins.
@@ -427,6 +67,9 @@ class PlotData(QtCore.QThread):
         :param plot_title: Title of the plot.
         :param value_scale: Title for the scale of the value column.  Default: m/s
         :param color_palette: Color Palette.  Default: Viridis256
+        :param bt_color: Bottom Track Shade color. DEFAULT: #737373 (grey)
+        :param bt_alpha: Bottom Track Shade alpha channel (transparent).  Default: 0.85
+        :param bt_line_color: Bottom Track Line color.  Default: Red.
         :return: Plot figure with heatmap, bottom track line and shade and colorbar.
         """
 
@@ -465,11 +108,12 @@ class PlotData(QtCore.QThread):
             # Create Bottom Track Line
             # Create Y1 as the line on the bottom
             # y2 will be all the bottom track range values
-            x = bt_range['time_stamp']
             y1 = [bin_depth_max] * len(bt_range.value)
-            y2 = bt_range['value']
-            p.varea(x=x, y1=y1, y2=y2, fill_color=bt_color, fill_alpha=bt_alpha)              # Shaded area
-            p.line(x=x, y=y2, line_color=bt_line_color, line_width=2, line_alpha=bt_alpha)    # Line
+            bt_range['y1'] = [bin_depth_max] * len(bt_range.value)
+
+            # Create the BT Line and Shaded area
+            p.varea(x='time_stamp', y1='y1', y2='value', source=bt_range, fill_color=bt_color, fill_alpha=bt_alpha)              # Shaded area
+            p.line(x='time_stamp', y='value', source=bt_range, line_color=bt_line_color, line_width=2, line_alpha=bt_alpha)    # Line
 
         # Set the plot upward or downward looking
         if is_upward:
@@ -505,6 +149,53 @@ class PlotData(QtCore.QThread):
         p.add_layout(color_bar, 'right')
 
         return p
+
+    def plot_bokeh_timeseries(self,
+                              df,
+                              is_upward,
+                              plot_title,
+                              value_scale="m/s"):
+
+        # Create plot
+        p = figure(title=plot_title,
+                   x_axis_type='datetime')
+
+        # Find the min and max value for the bin depth
+        # Create a height based off the bin size
+        bin_depth_min = df.bin_depth.min()
+        bin_depth_max = df.bin_depth.max()
+
+        # Set the data to a ColumnDataSource to use tooltips
+        source = ColumnDataSource(df)
+
+        p.line(x='time_stamp', y='value', source=source)
+
+        # Set the plot upward or downward looking
+        if is_upward:
+            p.y_range.range_padding = 0                             # Upward looking
+        else:
+            p.y_range = Range1d(bin_depth_max, bin_depth_min)       # Downward looking
+        p.x_range.range_padding = 0
+
+        # Create Tooltip
+        hover = HoverTool(
+            tooltips=[
+                ("DateTime", "@time_stamp{%Y-%m-%d %H:%M:%S}"),
+                #("Value", "@value  $color[swatch]:value"),
+                ("Value", "@value " + value_scale),
+                ("Depth", "@bin_depth m"),
+                ("Bin", "@bin_num"),
+                ("SS Code", "@ss_code"),
+                ("SS Config", "@ss_config")
+            ],
+            formatters={
+                'time_stamp': 'datetime'
+            },
+        )
+        p.add_tools(hover)
+
+        return p
+
 
     def plot_bokeh(self, avg_result):
         """
@@ -549,6 +240,8 @@ class PlotData(QtCore.QThread):
         vert_plot = self.plot_bokeh_heatmap(df_vertical, df_vertical['value'].min(), df_vertical['value'].max(), bt_range, ens_time_sec, num_bins, is_upward, "Vertical Velocity", "m/s")
         error_plot = self.plot_bokeh_heatmap(df_error, df_error['value'].min(), df_error['value'].max(), bt_range, ens_time_sec, num_bins, is_upward, "Error Velocity", "m/s")
 
+        bt_range = self.plot_bokeh_timeseries(bt_range, is_upward, "Bottom Track Range", "m")
+
         # Add addtional title
         #p.add_layout(Title(text="Subsystem: SubsystemConfig", align="center"), "top")
 
@@ -557,7 +250,8 @@ class PlotData(QtCore.QThread):
             [mag_plot],
             [dir_plot],
             [east_plot, north_plot],
-            [vert_plot, error_plot]
+            [vert_plot, error_plot],
+            [bt_range]
             ], sizing_mode='stretch_both')
 
         show(lo)
