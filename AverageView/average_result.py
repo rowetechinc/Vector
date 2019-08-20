@@ -18,6 +18,8 @@ class AverageResult:
         self.df_dir = pd.DataFrame()                # Accumulate the dir data
         self.df_bt_range = pd.DataFrame()           # Accumulate the BT Range
         self.df_avg_bt_range = pd.DataFrame()       # Accumulate the Average Bottom Track Range
+        self.df_rt_range = pd.DataFrame()           # Accumulate the RT Range
+        self.df_avg_rt_range = pd.DataFrame()       # Accumulate the Average Range Track Range
         self.prev_dt = None                         # Track ensemble time differences
         self.time_diff = 1                          # Initialize to 1 second
         self.num_bins = 1                           # Initialize number of bins
@@ -67,8 +69,11 @@ class AverageResult:
         # Accumulate the mag data
         self.accum_mag_dir(awc)
 
-        # Accumulate the mag data
+        # Accumulate the Bottom Track data
         self.accum_bt_range(awc)
+
+        # Accumulate the Range Tracking data
+        self.accum_rt_range(awc)
 
         # Set the latest number of bins
         self.num_bins = awc[AverageWaterColumn.INDEX_NUM_BINS]
@@ -152,8 +157,8 @@ class AverageResult:
 
     def accum_bt_range(self, awc):
         """
-        Create the Magnitude dataframe.  This takes all the information
-        from the Magnitude and creates a row in the dataframe for each bin,beam value.
+        Create the Bottom Track dataframe.  This takes all the information
+        from the Bottom Track and creates a row in the dataframe for each bin,beam value.
         :param awc: Average data.
         :return:
         """
@@ -193,6 +198,51 @@ class AverageResult:
             self.df_avg_bt_range = df
         else:
             self.df_avg_bt_range = pd.concat([self.df_avg_bt_range, df], ignore_index=True)
+
+    def accum_rt_range(self, awc):
+        """
+        Create the Range Tracking dataframe.  This takes all the information
+        from the Range Tracking and creates a row in the dataframe for each bin,beam value.
+        :param awc: Average data.
+        :return:
+        """
+        # Convert the east array to df
+        # params: vel_array, dt, ss_code, ss_config, blank, bin_size
+        # DF Columns: Index, time_stamp, ss_code, ss_config, bin_num, beam_num, bin_depth, value
+        df = Ensemble.array_beam_1d_to_df(awc[AverageWaterColumn.INDEX_RANGE_TRACK],
+                                          awc[AverageWaterColumn.INDEX_LAST_TIME],
+                                          awc[AverageWaterColumn.INDEX_SS_CODE],
+                                          awc[AverageWaterColumn.INDEX_SS_CONFIG])
+
+        # Store the range results
+        if self.df_rt_range.empty:
+            self.df_rt_range = df
+        else:
+            self.df_rt_range = pd.concat([self.df_rt_range, df], ignore_index=True)
+
+        # Average the Range Track Range
+        avg_range = Ensemble.get_avg_range(awc[AverageWaterColumn.INDEX_RANGE_TRACK])
+
+        # Create a dict entry
+        dict_result = {}
+        dict_result[0] = {'time_stamp': awc[AverageWaterColumn.INDEX_LAST_TIME],
+                          'ss_code': awc[AverageWaterColumn.INDEX_SS_CODE],
+                          'ss_config': awc[AverageWaterColumn.INDEX_SS_CONFIG],
+                          'bin_num': 0,
+                          'beam_num': 0,
+                          'bin_depth': avg_range,
+                          'value': avg_range}
+
+        # Create the dataframe from the dictionary
+        # important to set the 'orient' parameter to "index" to make the keys as rows
+        df = pd.DataFrame.from_dict(dict_result, "index")
+
+        # Store the range results
+        if self.df_avg_rt_range.empty:
+            self.df_avg_rt_range = df
+        else:
+            self.df_avg_rt_range = pd.concat([self.df_avg_rt_range, df], ignore_index=True)
+
 
     def replace_bad_val_with_none(self, df):
         """

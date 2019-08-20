@@ -104,7 +104,9 @@ class PlotData(QtCore.QThread):
                line_color=None)
 
         # Create a Bottom Track line and shade
-        if not bt_range.empty:
+        # Verify at least one value is greater than 0 for the range (value column)
+        # If all values are 0, then bottom track is not on
+        if not bt_range.empty and bt_range.value.max() > 0:
             # Create Bottom Track Line
             # Create Y1 as the line on the bottom
             # y2 will be all the bottom track range values
@@ -210,6 +212,7 @@ class PlotData(QtCore.QThread):
         df_error = avg_result.df_earth[avg_result.df_earth['beam_num'] == 3].reset_index(drop=True)
         df_mag = avg_result.df_mag
         bt_range = avg_result.df_avg_bt_range
+        rt_range = avg_result.df_avg_rt_range
         df_dir = avg_result.df_dir
         ens_time_sec = avg_result.time_diff.seconds
         num_bins = avg_result.num_bins
@@ -240,7 +243,13 @@ class PlotData(QtCore.QThread):
         vert_plot = self.plot_bokeh_heatmap(df_vertical, df_vertical['value'].min(), df_vertical['value'].max(), bt_range, ens_time_sec, num_bins, is_upward, "Vertical Velocity", "m/s")
         error_plot = self.plot_bokeh_heatmap(df_error, df_error['value'].min(), df_error['value'].max(), bt_range, ens_time_sec, num_bins, is_upward, "Error Velocity", "m/s")
 
-        bt_range = self.plot_bokeh_timeseries(bt_range, is_upward, "Bottom Track Range", "m")
+        # Check if we have bottom track range values
+        if not bt_range.empty and bt_range.value.max() > 0:
+            range_plot = self.plot_bokeh_timeseries(bt_range, is_upward, "Bottom Track Range", "m")
+
+        # Check if we have range track range values
+        if not rt_range.empty and rt_range.value.max() > 0:
+            range_plot = self.plot_bokeh_timeseries(rt_range, is_upward, "Range Track Range", "m")
 
         # Add addtional title
         #p.add_layout(Title(text="Subsystem: SubsystemConfig", align="center"), "top")
@@ -251,7 +260,7 @@ class PlotData(QtCore.QThread):
             [dir_plot],
             [east_plot, north_plot],
             [vert_plot, error_plot],
-            [bt_range]
+            [range_plot]
             ], sizing_mode='stretch_both')
 
         show(lo)
