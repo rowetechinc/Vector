@@ -3,6 +3,8 @@ from rti_python.Utilities.read_binary_file import ReadBinaryFile
 from rti_python.Post_Process.Average.AverageWaterColumn import AverageWaterColumn
 from . import average_result
 import pandas as pd
+import logging
+from obsub import event
 
 
 class ProcessAverage:
@@ -14,7 +16,8 @@ class ProcessAverage:
 
         # Read the binary file
         self.read_binary = ReadBinaryFile()
-        self.read_binary.ensemble_event += self.process_ens
+        self.read_binary.ensemble_event += self.process_ens         # Process the ensemble
+        self.read_binary.file_progress += self.read_file_progress   # Monitor the file progress
 
         # Process average
         self.avg_ens_dict = {}                      # Average Water Column for each subsystem config
@@ -45,6 +48,29 @@ class ProcessAverage:
             self.read_binary.playback(ens_file)
 
         return self.results_dict
+
+    @event
+    def file_progress(self, bytes_read, total_bytes, ens_file_path):
+        """
+        Monitor the file progress.  This will give the current number of bytes read, the total bytes
+        and the file name.
+        :param bytes_read: Bytes read.
+        :param total_bytes: Total bytes in file.
+        :param ens_file_path: File path.
+        :return:
+        """
+        logging.debug("ProcessAverage: Bytes Read: " + str(bytes_read) + " - Total Bytes: " + str(total_bytes) + " -- " + ens_file_path)
+
+    def read_file_progress(self, sender, bytes_read, total_bytes, ens_file_path):
+        """
+        Pass the file progress along to the next object.
+        :param sender:
+        :param bytes_read: Bytes read.
+        :param total_bytes: Total bytes.
+        :param ens_file_path: File path
+        :return:
+        """
+        self.file_progress(bytes_read, total_bytes, ens_file_path)
 
     def process_ens(self, sender, ens):
         """

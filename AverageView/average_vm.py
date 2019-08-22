@@ -29,20 +29,24 @@ class AverageVM(average_view.Ui_AverageView):
 
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        files, _ = QFileDialog.getOpenFileNames(self.parent, "QFileDialog.getOpenFileNames()", "",
-                                                "Ensemble Files (*.ens);;Binary Files (*.bin);;All Files (*)", options=options)
+        files, _ = QFileDialog.getOpenFileNames(self.parent,
+                                                "Ensemble Files Selection",         # Title
+                                                "",
+                                                "Ensemble Files (*.ens);;Binary Files (*.bin);;All Files (*)",
+                                                options=options)
 
         if files:
             print(files)
             # Process the files
-            #self.read_ens(files)
-            self.process_avg = process_average.ProcessAverage(self.parent, files, self.num_avg_ens)
-            #self.process_avg.finished.connect(self.on_finished)
-            #self.process_avg.start()
-            results = self.process_avg.read_ens_files(files)
+            process_avg = process_average.ProcessAverage(self.parent, files, self.num_avg_ens)
+            process_avg.file_progress += self.read_file_progress
+            results = process_avg.read_ens_files(files)
 
             # Update the Table Views
             self.update_table_views(results)
+
+    def read_file_progress(self, sender, bytes_read, total_bytes, ens_file_path):
+        print("AverageVM: Bytes Read: " + str(bytes_read) + " - Total Bytes: " + str(total_bytes) + " -- " + ens_file_path)
 
     def update_table_views(self, results_dict):
         # Set the Tableview with the dataframe
