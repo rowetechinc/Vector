@@ -26,6 +26,8 @@ class AverageResult:
         self.ss_code = ""                           # Initialize the code
         self.ss_config = 0                          # Initialize the config
         self.is_upward = False                      # Orientation of the ADCP
+        self.first_ens_num = 0                      # First Ensemble Number in average
+        self.last_ens_num = 0                       # Last Ensemble number in Average
 
     def update_results(self, awc):
         #print("SS Code: " + str(awc[AverageWaterColumn.INDEX_SS_CODE]))
@@ -63,6 +65,10 @@ class AverageResult:
             self.df_earth_vertical = self.df_earth_vertical.append(df_earth.loc["Vertical"], ignore_index=True)
             self.df_earth_error = self.df_earth_error.append(df_earth.loc["Error"], ignore_index=True)
 
+        # Set the First and Last Ensemble Number
+        self.first_ens_num = awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM]
+        self.last_ens_num = awc[AverageWaterColumn.INDEX_LAST_ENS_NUM]
+
         # Accumulate the velocity data
         self.accum_earth_vel(awc)
 
@@ -94,8 +100,6 @@ class AverageResult:
         # Set Orientation
         self.is_upward = awc[AverageWaterColumn.INDEX_IS_UPWARD]
 
-        #self.time_diff = awc[AverageWaterColumn.INDEX_LAST_TIME] - awc[AverageWaterColumn.INDEX_FIRST_TIME]
-
     def accum_earth_vel(self, awc):
         """
         Create the Earth Velocity dataframe.  This takes all the information
@@ -111,7 +115,9 @@ class AverageResult:
                                      awc[AverageWaterColumn.INDEX_SS_CODE],
                                      awc[AverageWaterColumn.INDEX_SS_CONFIG],
                                      awc[AverageWaterColumn.INDEX_BLANK],
-                                     awc[AverageWaterColumn.INDEX_BIN_SIZE])
+                                     awc[AverageWaterColumn.INDEX_BIN_SIZE],
+                                     awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM],
+                                     awc[AverageWaterColumn.INDEX_LAST_ENS_NUM])
 
         # Store the results
         if self.df_earth.empty:
@@ -134,20 +140,24 @@ class AverageResult:
                                          awc[AverageWaterColumn.INDEX_SS_CODE],
                                          awc[AverageWaterColumn.INDEX_SS_CONFIG],
                                          awc[AverageWaterColumn.INDEX_BLANK],
-                                         awc[AverageWaterColumn.INDEX_BIN_SIZE])
+                                         awc[AverageWaterColumn.INDEX_BIN_SIZE],
+                                         awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM],
+                                         awc[AverageWaterColumn.INDEX_LAST_ENS_NUM])
 
         # Store the mag results
         if self.df_mag.empty:
             self.df_mag = df_mag
         else:
-            self.df_mag = pd.concat([self.df_mag, df_mag])
+            self.df_mag = pd.concat([self.df_mag, df_mag], ignore_index=True)
 
         df_dir = Ensemble.array_1d_to_df(awc[AverageWaterColumn.INDEX_DIR],
                                          awc[AverageWaterColumn.INDEX_LAST_TIME],
                                          awc[AverageWaterColumn.INDEX_SS_CODE],
                                          awc[AverageWaterColumn.INDEX_SS_CONFIG],
                                          awc[AverageWaterColumn.INDEX_BLANK],
-                                         awc[AverageWaterColumn.INDEX_BIN_SIZE])
+                                         awc[AverageWaterColumn.INDEX_BIN_SIZE],
+                                         awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM],
+                                         awc[AverageWaterColumn.INDEX_LAST_ENS_NUM])
 
         # Store the dir results
         if self.df_dir.empty:
@@ -168,7 +178,9 @@ class AverageResult:
         df = Ensemble.array_beam_1d_to_df(awc[AverageWaterColumn.INDEX_BT_RANGE],
                                           awc[AverageWaterColumn.INDEX_LAST_TIME],
                                           awc[AverageWaterColumn.INDEX_SS_CODE],
-                                          awc[AverageWaterColumn.INDEX_SS_CONFIG])
+                                          awc[AverageWaterColumn.INDEX_SS_CONFIG],
+                                          awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM],
+                                          awc[AverageWaterColumn.INDEX_LAST_ENS_NUM])
 
         # Store the range results
         if self.df_bt_range.empty:
@@ -187,6 +199,8 @@ class AverageResult:
                           'bin_num': 0,
                           'beam_num': 0,
                           'bin_depth': avg_range,
+                          'first_ens_num': awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM],
+                          'last_ens_num': awc[AverageWaterColumn.INDEX_LAST_ENS_NUM],
                           'value': avg_range}
 
         # Create the dataframe from the dictionary
@@ -212,7 +226,9 @@ class AverageResult:
         df = Ensemble.array_beam_1d_to_df(awc[AverageWaterColumn.INDEX_RANGE_TRACK],
                                           awc[AverageWaterColumn.INDEX_LAST_TIME],
                                           awc[AverageWaterColumn.INDEX_SS_CODE],
-                                          awc[AverageWaterColumn.INDEX_SS_CONFIG])
+                                          awc[AverageWaterColumn.INDEX_SS_CONFIG],
+                                          awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM],
+                                          awc[AverageWaterColumn.INDEX_LAST_ENS_NUM])
 
         # Store the range results
         if self.df_rt_range.empty:
@@ -231,6 +247,8 @@ class AverageResult:
                           'bin_num': 0,
                           'beam_num': 0,
                           'bin_depth': avg_range,
+                          'first_ens_num': awc[AverageWaterColumn.INDEX_FIRST_ENS_NUM],
+                          'last_ens_num': awc[AverageWaterColumn.INDEX_LAST_ENS_NUM],
                           'value': avg_range}
 
         # Create the dataframe from the dictionary
@@ -242,7 +260,6 @@ class AverageResult:
             self.df_avg_rt_range = df
         else:
             self.df_avg_rt_range = pd.concat([self.df_avg_rt_range, df], ignore_index=True)
-
 
     def replace_bad_val_with_none(self, df):
         """

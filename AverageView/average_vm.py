@@ -19,6 +19,10 @@ class AverageVM(average_view.Ui_AverageView):
         # Set the number of ensembles to average
         self.num_avg_ens = self.avgNumSpinBox.value()
 
+        # Progress bar
+        self.progressBar.setValue(0)
+        self.progressBar.setMaximum(100)
+
     def browse_button_click(self):
         """
         Button Clicked to open a file browser to select the files to playback.
@@ -40,6 +44,8 @@ class AverageVM(average_view.Ui_AverageView):
             # Process the files
             process_avg = process_average.ProcessAverage(self.parent, files, self.num_avg_ens)
             process_avg.file_progress += self.read_file_progress
+
+            # Pass the file to load and process
             results = process_avg.read_ens_files(files)
 
             # Update the Table Views
@@ -47,6 +53,8 @@ class AverageVM(average_view.Ui_AverageView):
 
     def read_file_progress(self, sender, bytes_read, total_bytes, ens_file_path):
         print("AverageVM: Bytes Read: " + str(bytes_read) + " - Total Bytes: " + str(total_bytes) + " -- " + ens_file_path)
+        self.progressBar.setMaximum(total_bytes)
+        self.progressBar.setValue(bytes_read)
 
     def update_table_views(self, results_dict):
         # Set the Tableview with the dataframe

@@ -47,6 +47,8 @@ class ProcessAverage:
             # Read in the file
             self.read_binary.playback(ens_file)
 
+        # Result comes from the event handler
+        # processing the data and storing it to the dict
         return self.results_dict
 
     @event
