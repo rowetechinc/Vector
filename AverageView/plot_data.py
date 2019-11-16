@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 from PyQt5 import QtCore
 from rti_python.Ensemble.Ensemble import Ensemble
 from rti_python.Post_Process.Average.AverageWaterColumn import AverageWaterColumn
-from bokeh.models import HoverTool, Title
+from bokeh.models import HoverTool, Title, Panel, Tabs
 from bokeh.layouts import grid, column, gridplot
 import numpy as np
+from . import menu_view
 
 
 class PlotData(QtCore.QThread):
@@ -387,7 +388,15 @@ class PlotData(QtCore.QThread):
             [stick_plot]
             ], sizing_mode='stretch_both')
 
-        show(lo)
+        plot_panel = Panel(child=lo, title="Plots")
+
+        menu = menu_view.MenuView()
+        menu_panel = Panel(child=menu.get_layout(), title="menu")
+
+        main_lo = Tabs(tabs=[menu_panel, plot_panel])
+
+        #show(lo)
+        show(main_lo)
 
         # Save all the plots
         stick_plot_file_name = "stick_plot_" + str(ss_code) + "_" + str(ss_config) + ".html"

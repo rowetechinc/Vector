@@ -1,5 +1,8 @@
 import Dashboard
 from AverageView import average_vm
+from AverageView import menu_view
+from bokeh.io import show
+from bokeh.models import Panel, Tabs
 
 
 class VectorManager:
@@ -9,7 +12,12 @@ class VectorManager:
         self.parent = parent
 
         # Setup the Average VM
-        self.avg_vm = average_vm.AverageVM(self.parent)
+        #self.avg_vm = average_vm.AverageVM(self.parent)
+
+        menu = menu_view.MenuView()
+        menu_panel = Panel(child=menu.get_layout(), title="menu")
+        main_lo = Tabs(tabs=[menu_panel])
+        show(main_lo)
 
         #Dashboard
         #self.dashboard = Dashboard.Dashboard()
